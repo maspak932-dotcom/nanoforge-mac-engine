@@ -1,5 +1,5 @@
 // ============================================================
-// tb.v — Nano-Forge 4-Lane MAC Testbench (coverage-complete)
+// tb.v — Nano-Forge 4-Lane MAC Testbench (Gate-Level Fixed)
 // ============================================================
 `timescale 1ns/1ps
 `default_nettype none
@@ -57,11 +57,14 @@ module tb;
         end
     endtask
 
+    // Updated to use pin-based read_acc so it works in gate-level simulation
     task check_lane(input [1:0] lane, input [31:0] expected);
+        reg [31:0] actual;
         begin
-            if (dut.acc[lane] !== expected) begin
+            read_acc(lane, actual);
+            if (actual !== expected) begin
                 $display("FAIL lane=%0d expected=%h actual=%h time=%0t",
-                          lane, expected, dut.acc[lane], $time);
+                          lane, expected, actual, $time);
                 errors = errors + 1;
             end
         end
@@ -133,9 +136,12 @@ module tb;
         send_cmd(CMD_MAC_ALL, 2'd0, 8'd7);
         check_lane(0, 32'd10); check_lane(1, 32'd0);
         check_lane(2, 32'd30); check_lane(3, 32'd40);
+        
+        `ifndef GATES
         if (dut.weight[0] !== 8'd1) begin
             $display("FAIL weight changed while ena=0"); errors = errors + 1;
         end
+        `endif
         ena = 1'b1;
 
         // TEST 6: Negative saturation to INT32_MIN
@@ -190,9 +196,13 @@ module tb;
         #1;
         check_lane(0, 32'd0); check_lane(1, 32'd0);
         check_lane(2, 32'd0); check_lane(3, 32'd0);
+        
+        `ifndef GATES
         if (dut.weight[2] !== 8'sd0) begin
             $display("FAIL weight not cleared by reset"); errors = errors + 1;
         end
+        `endif
+        
         if (uio_out[0] !== 1'b0) begin
             $display("FAIL overflow flag not cleared by reset"); errors = errors + 1;
         end
