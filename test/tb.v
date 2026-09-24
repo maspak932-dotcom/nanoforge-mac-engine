@@ -4,7 +4,7 @@
 `timescale 1ns/1ps
 `default_nettype none
 
-module tb_nanoforge_mac;
+module tb;
 
     reg clk, rst_n, ena;
     reg  [7:0] ui_in, uio_in;
@@ -31,7 +31,7 @@ module tb_nanoforge_mac;
 
     initial begin
         $dumpfile("nanoforge_mac.vcd");
-        $dumpvars(0, tb_nanoforge_mac);
+        $dumpvars(0, tb);
     end
 
     task send_cmd(input [2:0] cmd, input [1:0] lane, input [7:0] data);
@@ -139,7 +139,6 @@ module tb_nanoforge_mac;
         ena = 1'b1;
 
         // TEST 6: Negative saturation to INT32_MIN
-        // -128 * 127 = -16256, 132105 iterations exceed -2^31.
         $display("TEST 6: Negative saturation");
         send_cmd(CMD_CLR_ALL, 2'd0, 8'd0);
         send_cmd(CMD_LOAD_W, 2'd0, 8'd127);
@@ -151,10 +150,10 @@ module tb_nanoforge_mac;
             errors = errors + 1;
         end
 
-        // TEST 7 (NEW): CLR_ONE must NOT clear the sticky overflow flag
+        // TEST 7: CLR_ONE must NOT clear the sticky overflow flag
         $display("TEST 7: CLR_ONE does not clear sticky overflow");
         send_cmd(CMD_CLR_ONE, 2'd0, 8'd0);
-        check_lane(0, 32'd0); // lane value IS cleared
+        check_lane(0, 32'd0); 
         if (uio_out[0] !== 1'b1) begin
             $display("FAIL sticky overflow flag was cleared by CLR_ONE (should NOT be)");
             errors = errors + 1;
@@ -169,8 +168,7 @@ module tb_nanoforge_mac;
             errors = errors + 1;
         end
 
-        // TEST 9 (NEW): Positive saturation to INT32_MAX
-        // 127 * 127 = 16129, 133150 iterations exceed +2^31-1.
+        // TEST 9: Positive saturation to INT32_MAX
         $display("TEST 9: Positive saturation");
         send_cmd(CMD_LOAD_W, 2'd1, 8'd127);
         for (k = 0; k < 133150; k = k + 1)
@@ -183,7 +181,7 @@ module tb_nanoforge_mac;
 
         // TEST 10: Mid-operation asynchronous reset recovery
         $display("TEST 10: Mid-operation reset");
-        send_cmd(CMD_CLR_ALL, 2'd0, 8'd0); // isolate: clean slate before this test
+        send_cmd(CMD_CLR_ALL, 2'd0, 8'd0); 
         send_cmd(CMD_LOAD_W, 2'd2, 8'd7);
         send_cmd(CMD_MAC_ONE, 2'd2, 8'd9);
         check_lane(2, 32'd63);
